@@ -8,7 +8,7 @@ from tools.get_wikipedia_article import get_wikipedia_article
 load_dotenv()
 
 root_agent = Agent(
-    name="wiki_agent",
+    name="root_agent",
     model=os.getenv("MODEL_ID", "gemini-2.5-flash-lite"),
     instruction=(
         "You are a Wikipedia research assistant. "

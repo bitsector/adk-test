@@ -8,5 +8,4 @@ else:
     print("Title:", result["title"])
     print("URL:", result["url"])
     print(f"Content length: {len(result['content'])} chars")
-    print("\n--- First 500 chars ---")
     print(result["content"])
