@@ -45,14 +45,13 @@ EOF
 ### 4. Run with ADK
 
 ADK app names must be valid Python identifiers (letters, digits, underscores). Since this
-repo folder is named `adk-test`, run ADK from this folder as an agents directory and use the
-valid subfolder app `wiki_agent`.
+repo folder is named `adk-test`, run ADK against the valid subfolder app directly.
 
 ```bash
-adk web .
+adk web wiki_agent
 ```
 
-Then open the local URL shown in the terminal and choose `wiki_agent` from the app dropdown.
+Then open the local URL shown in the terminal.
 
 If the browser is still on a stale URL like `/dev/apps/adk-test/...`, switch to
 `wiki_agent` in the app selector or reload from `/`.
@@ -62,6 +61,17 @@ Or run directly in CLI mode:
 ```bash
 adk run wiki_agent
 ```
+
+### Debug tool behavior
+
+If the tool result looks wrong, inspect the ADK log file:
+
+```bash
+tail -F /tmp/agents_log/agent.latest.log
+```
+
+The Wikipedia tool logs search/summary status lines so you can see the query,
+matched title, and HTTP status.
 
 ## Try prompts
 
