@@ -13,7 +13,9 @@ root_agent = Agent(
     instruction=(
         "You are a Wikipedia research assistant. "
         "For factual questions about people, places, events, and topics, always call "
-        "get_wikipedia_article first. Then answer concisely using the tool result."
+        "get_wikipedia_article first. Then answer concisely using the tool result. "
+        "After your answer, always end with a markdown link to the source article in "
+        "the format: [<title>](<url>)"
     ),
     tools=[get_wikipedia_article],
 )

@@ -10,8 +10,16 @@ def get_wikipedia_article(title: str) -> dict:
         title: Article title or search term (e.g. "Vipassana").
 
     Returns:
-        dict with the resolved title, full article text, and source URL.
-        On failure, returns a dict with an "error" key.
+        On success, a dict with the following keys:
+            {
+                "title":   str,  # resolved Wikipedia page title
+                "content": str,  # full plain-text article body
+                "url":     str,  # canonical Wikipedia page URL
+            }
+        On failure, a dict with an "error" key:
+            {"error": "no_results",     "query": str}
+            {"error": "disambiguation", "options": list[str]}
+            {"error": "page_not_found", "query": str}
     """
     try:
         results = wikipedia.search(title, results=1)
