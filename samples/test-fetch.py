@@ -1,4 +1,4 @@
-from tools.get_wikipedia_article import get_wikipedia_article
+from shared.get_wikipedia_article import get_wikipedia_article
 
 result = get_wikipedia_article("Winston Churchill")
 

@@ -4,7 +4,10 @@ Minimal Google ADK playground with a Wikipedia-search tool.
 
 ## Files
 
-- `wiki_agent/agent.py`: ADK agent definition (`root_agent`) with a custom `search_wikipedia` tool.
+- `agents/`: ADK apps directory. Each subfolder exposing a `root_agent` is a selectable app.
+  - `agents/wiki/`: Wikipedia research orchestrator (`root_agent`) + `discover_agent` sub-agent.
+  - `agents/weather/`: minimal template agent to copy for new experiments.
+  - `agents/shared/`: shared tool functions imported by agents (not an app itself).
 - `requirements.txt`: Python dependencies for local development.
 
 ## Quickstart
@@ -40,26 +43,24 @@ MODEL_ID=gemini-2.5-flash-lite
 EOF
 ```
 
-`wiki_agent/agent.py` loads `.env` automatically via `python-dotenv`.
+Agents load `.env` automatically via `python-dotenv`.
 
 ### 4. Run with ADK
 
-ADK app names must be valid Python identifiers (letters, digits, underscores). Since this
-repo folder is named `adk-test`, run ADK against the valid subfolder app directly.
+Point ADK at the `agents/` directory. Each subfolder with a `root_agent` shows up as a
+selectable app in the web UI. Run from the repo root:
 
 ```bash
-adk web wiki_agent
+adk web agents
 ```
 
-Then open the local URL shown in the terminal.
+Then open the local URL shown in the terminal and pick an app (`wiki`, `weather`, …)
+from the selector.
 
-If the browser is still on a stale URL like `/dev/apps/adk-test/...`, switch to
-`wiki_agent` in the app selector or reload from `/`.
-
-Or run directly in CLI mode:
+Or run a single app directly in CLI mode:
 
 ```bash
-adk run wiki_agent
+adk run agents/wiki
 ```
 
 ### Debug tool behavior

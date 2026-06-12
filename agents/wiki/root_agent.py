@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.tools import AgentTool
 
-from wiki_agents.discover_agent import discover_agent
-from tools.get_wikipedia_article import get_wikipedia_article
+from .discover_agent import discover_agent
+from shared.get_wikipedia_article import get_wikipedia_article
 
 load_dotenv()
 
