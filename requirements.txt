@@ -2,3 +2,4 @@ google-adk
 python-dotenv
 wikipedia
 requests
+google-cloud-aiplatform  # provides `vertexai` + RAG Engine, used by agents/rag

@@ -29,7 +29,8 @@ agents and is not itself an app.
 agents/
 ├── shared/      # shared tool functions (importable as `shared`), not an app
 ├── wiki/        # app: Wikipedia research orchestrator + discover sub-agent
-└── weather/     # app: minimal template agent to copy for new experiments
+├── weather/     # app: minimal template agent to copy for new experiments
+└── rag/         # app: Vertex AI RAG Engine agent (needs Vertex, see rag/README.md)
 ```
 
 ## Running
