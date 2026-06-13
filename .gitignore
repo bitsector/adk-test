@@ -147,6 +147,11 @@ activemq-data/
 # SageMath parsed files
 *.sage.py
 
+# GCP service-account keys / Workload Identity Federation configs — never commit
+secrets/
+*service-account*.json
+*sa-key*.json
+
 # Environments
 .env
 .envrc
