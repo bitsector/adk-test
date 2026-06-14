@@ -152,6 +152,10 @@ secrets/
 *service-account*.json
 *sa-key*.json
 
+# RAG source documents — keep the dir committable, ignore its (large/proprietary) contents
+agents/rag/rag_materials/*
+!agents/rag/rag_materials/.gitkeep
+
 # Environments
 .env
 .envrc

@@ -44,8 +44,8 @@ _materialize_inline_credentials()
 # Set these in .env when you are ready (see agents/rag/README.md):
 #   GOOGLE_GENAI_USE_VERTEXAI=True
 #   GOOGLE_CLOUD_PROJECT=<your-project-id>
-#   GOOGLE_CLOUD_LOCATION=us-east1
-#   RAG_CORPUS=<filled in by prepare_corpus_and_data.py>
+#   GOOGLE_CLOUD_LOCATION=us-central1
+#   CORPUS_NAME=<corpus resource name, filled in by prepare_corpus_and_data.py>
 #
 # Credentials come from Application Default Credentials (ADC), so this code does
 # not change between dev and prod. ADC resolves in this order automatically:
@@ -67,11 +67,11 @@ os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "us-central1")
 
 # The RAG retrieval tool is only wired up once a corpus exists. Run
 # `python agents/rag/shared_libraries/prepare_corpus_and_data.py` to create one;
-# it writes RAG_CORPUS into .env. Until then this runs as a plain chat agent.
+# it writes CORPUS_NAME into .env. Until then this runs as a plain chat agent.
 # The Vertex import is guarded so this agent can sit in the `adk web` picker
 # alongside the API-key agents before google-cloud-aiplatform is installed.
 tools = []
-rag_corpus = os.environ.get("RAG_CORPUS")
+rag_corpus = os.environ.get("CORPUS_NAME")
 if rag_corpus:
     try:
         from google.adk.tools.retrieval.vertex_ai_rag_retrieval import (
@@ -92,7 +92,7 @@ if rag_corpus:
         tools.append(ask_vertex_retrieval)
     except ImportError:
         print(
-            "[agents/rag] RAG_CORPUS is set but google-cloud-aiplatform is not "
+            "[agents/rag] CORPUS_NAME is set but google-cloud-aiplatform is not "
             "installed. Run `pip install -r requirements.txt`. Running as a "
             "plain chat agent for now."
         )

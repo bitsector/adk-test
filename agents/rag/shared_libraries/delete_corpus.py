@@ -39,7 +39,6 @@ load_dotenv(ENV_FILE_PATH)
 
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION")
-CORPUS_DISPLAY_NAME = "Alphabet_10K_2025_corpus"
 
 if not PROJECT_ID or not LOCATION:
     raise ValueError(
@@ -51,25 +50,29 @@ def main():
     credentials, _ = default()
     vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=credentials)
 
-    # Prefer the exact resource name written to .env; fall back to display name.
-    corpus_name = os.getenv("RAG_CORPUS")
+    # Delete the corpus the agent currently points at (the one in CORPUS_NAME).
+    corpus_name = os.getenv("CORPUS_NAME")
     if not corpus_name:
-        for corpus in rag.list_corpora():
-            if corpus.display_name == CORPUS_DISPLAY_NAME:
-                corpus_name = corpus.name
-                break
-
-    if not corpus_name:
-        print("No corpus found to delete (RAG_CORPUS unset and no match by name).")
+        print(
+            "CORPUS_NAME is not set in .env, so there's no active corpus to delete.\n"
+            "List/clean up older corpora via the REST API (see README)."
+        )
         return
 
-    print(f"Deleting corpus: {corpus_name}")
+    # rag.delete_corpus won't delete a non-empty corpus (the SDK doesn't pass
+    # force=True), so remove the files first, then delete the now-empty corpus.
+    files = list(rag.list_files(corpus_name=corpus_name))
+    print(f"Deleting {len(files)} file(s) from corpus {corpus_name}...")
+    for f in files:
+        rag.delete_file(name=f.name)
+        print(f"  deleted {f.display_name}")
+
     rag.delete_corpus(name=corpus_name)
     print("Corpus deleted (files + embeddings removed).")
 
     # Clear the stale id so the agent goes back to plain-chat mode.
-    unset_key(ENV_FILE_PATH, "RAG_CORPUS")
-    print(f"Removed RAG_CORPUS from {ENV_FILE_PATH}")
+    unset_key(ENV_FILE_PATH, "CORPUS_NAME")
+    print(f"Removed CORPUS_NAME from {ENV_FILE_PATH}")
 
     print("\nRemaining corpora in this project/location:")
     remaining = list(rag.list_corpora())

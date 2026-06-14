@@ -18,12 +18,12 @@ its sources. By default the corpus is Alphabet's 2025 10-K PDF.
 ## How the RAG works (where the "RAG part" lives)
 
 1. **Ingestion (run once):** `prepare_corpus_and_data.py` creates a corpus, embeds
-   the PDF with `text-embedding-004`, and writes the corpus id to `.env` as `RAG_CORPUS`.
+   the PDF with `text-embedding-004`, and writes the corpus id to `.env` as `CORPUS_NAME`.
 2. **Retrieval (runtime):** [agent.py](agent.py) builds a `VertexAiRagRetrieval` tool
-   pointed at `RAG_CORPUS`. Gemini calls it, RAG Engine returns the top matching
+   pointed at `CORPUS_NAME`. Gemini calls it, RAG Engine returns the top matching
    chunks, and Gemini answers from them with citations.
 
-If `RAG_CORPUS` is unset, the tool is skipped and this runs as a plain chat agent.
+If `CORPUS_NAME` is unset, the tool is skipped and this runs as a plain chat agent.
 
 ## Using it on Vertex — step by step
 
@@ -57,10 +57,13 @@ curl -s -X PATCH \
   "https://us-central1-aiplatform.googleapis.com/v1beta1/projects/gcp-cloud-run-tests/locations/us-central1/ragEngineConfig" \
   -d '{"ragManagedDbConfig": {"serverless": {}}}'
 
-# 4. Build the corpus (embeds the 10-K, sets RAG_CORPUS in .env)
+# 4. Drop your .pdf / .txt / .docx / .md documents into agents/rag/rag_materials/,
+#    then build the corpus. Each run creates a fresh timestamped corpus from all
+#    those files (their union = the knowledge base) and writes its resource name
+#    to CORPUS_NAME in .env, which the agent reads.
 python agents/rag/shared_libraries/prepare_corpus_and_data.py
 
-# 4. Run it
+# 5. Run it
 adk run agents/rag        # CLI
 adk web agents            # web UI, pick "rag" from the dropdown
 ```
@@ -71,8 +74,13 @@ adk web agents            # web UI, pick "rag" from the dropdown
 > project + billing are set up; to keep them on the API-key path, run the RAG agent
 > in its own process / shell with that variable set.
 
-To swap in your own documents, change `PDF_URL`/`CORPUS_DISPLAY_NAME` in the
-ingestion script (or call `rag.upload_file` / `rag.import_files` for other sources).
+To add or change documents, just edit the contents of `rag_materials/` and re-run
+the ingestion script — it sweeps every `*.pdf` / `*.txt` / `*.docx` / `*.md` there
+into a **fresh timestamped corpus** (e.g. `202606141530-corpus`) and repoints
+`CORPUS_NAME` at it. The previous corpus is left behind (orphaned) — delete the
+active one with `delete_corpus.py`, or clean up older ones via the REST list/delete.
+(The engine also supports PPTX/HTML if you widen `SUPPORTED_EXTENSIONS`; images are
+not supported.)
 
 ## Running in production (service account / WIF, no gcloud)
 
@@ -93,7 +101,7 @@ gcloud projects add-iam-policy-binding gcp-cloud-run-tests \
 
 gcloud run deploy rag-agent \
     --service-account=rag-agent@gcp-cloud-run-tests.iam.gserviceaccount.com \
-    --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=True,GOOGLE_CLOUD_PROJECT=gcp-cloud-run-tests,GOOGLE_CLOUD_LOCATION=us-central1,RAG_CORPUS=<corpus-id>
+    --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=True,GOOGLE_CLOUD_PROJECT=gcp-cloud-run-tests,GOOGLE_CLOUD_LOCATION=us-central1,CORPUS_NAME=<corpus-resource-name>
     # ... + your image/source. Config goes in env vars, NOT a .env file.
 ```
 
@@ -137,7 +145,7 @@ When you're done, delete the corpus so the managed storage stops costing anythin
 python agents/rag/shared_libraries/delete_corpus.py
 ```
 
-This calls `rag.delete_corpus` (removes files + embeddings) and clears `RAG_CORPUS`
+This calls `rag.delete_corpus` (removes files + embeddings) and clears `CORPUS_NAME`
 from `.env`, so the agent drops back to plain-chat mode. The default `RagManagedDb`
 storage lives in a Google-managed tenant project, so deleting the corpus — not any
 action in your own project's console — is what ends the charge.
