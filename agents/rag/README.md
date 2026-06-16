@@ -149,3 +149,34 @@ This calls `rag.delete_corpus` (removes files + embeddings) and clears `CORPUS_N
 from `.env`, so the agent drops back to plain-chat mode. The default `RagManagedDb`
 storage lives in a Google-managed tenant project, so deleting the corpus — not any
 action in your own project's console — is what ends the charge.
+
+### Delete ALL corpora (nuke everything)
+
+`delete_corpus.py` only removes the one corpus in `CORPUS_NAME`. Because each
+ingestion run creates a fresh timestamped corpus, orphans accumulate — this
+gcloud-auth + REST sweep lists every corpus in a region and force-deletes each
+(`force=true` also removes its files). Pure shell, no extra deps:
+
+```bash
+REGION=us-central1
+PROJECT=gcp-cloud-run-tests
+TOKEN=$(gcloud auth print-access-token)
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://$REGION-aiplatform.googleapis.com/v1beta1/projects/$PROJECT/locations/$REGION/ragCorpora" \
+  | grep -oE '"name": *"projects/[^"]*/ragCorpora/[^"]*"' \
+  | sed -E 's/.*"(projects[^"]*)"/\1/' \
+  | while read -r NAME; do
+      echo "Deleting $NAME"
+      curl -s -X DELETE -H "Authorization: Bearer $TOKEN" \
+        "https://$REGION-aiplatform.googleapis.com/v1beta1/$NAME?force=true"
+      echo
+    done
+```
+
+Corpora are per-region, so repeat with `REGION=us-east1` (etc.) for any other
+region you used. Confirm it's clean — the list should return `{}`:
+
+```bash
+curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://us-central1-aiplatform.googleapis.com/v1beta1/projects/gcp-cloud-run-tests/locations/us-central1/ragCorpora"
+```
