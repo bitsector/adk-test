@@ -156,6 +156,9 @@ secrets/
 agents/rag/rag_materials/*
 !agents/rag/rag_materials/.gitkeep
 
+# RAG corpus pointer — per-environment runtime state written by the ingestion script
+agents/rag/.corpus_data
+
 # Environments
 .env
 .envrc

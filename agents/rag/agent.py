@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from google.adk.agents import Agent
 
 from .prompts import return_instructions_root
+from .shared_libraries.corpus_store import read_corpus_name
 
 load_dotenv()
 
@@ -45,7 +46,9 @@ _materialize_inline_credentials()
 #   GOOGLE_GENAI_USE_VERTEXAI=True
 #   GOOGLE_CLOUD_PROJECT=<your-project-id>
 #   GOOGLE_CLOUD_LOCATION=us-central1
-#   CORPUS_NAME=<corpus resource name, filled in by prepare_corpus_and_data.py>
+# The corpus pointer is NOT kept in .env: prepare_corpus_and_data.py writes it to
+# agents/rag/.corpus_data, which this agent reads. (For containers/prod you can
+# instead set a CORPUS_NAME env var, used as a fallback below.)
 #
 # Credentials come from Application Default Credentials (ADC), so this code does
 # not change between dev and prod. ADC resolves in this order automatically:
@@ -67,11 +70,12 @@ os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "us-central1")
 
 # The RAG retrieval tool is only wired up once a corpus exists. Run
 # `python agents/rag/shared_libraries/prepare_corpus_and_data.py` to create one;
-# it writes CORPUS_NAME into .env. Until then this runs as a plain chat agent.
-# The Vertex import is guarded so this agent can sit in the `adk web` picker
-# alongside the API-key agents before google-cloud-aiplatform is installed.
+# it records the corpus name in agents/rag/.corpus_data (the shared root .env is
+# left untouched). Until then this runs as a plain chat agent. The Vertex import
+# is guarded so this agent can sit in the `adk web` picker alongside the API-key
+# agents before google-cloud-aiplatform is installed.
 tools = []
-rag_corpus = os.environ.get("CORPUS_NAME")
+rag_corpus = read_corpus_name() or os.environ.get("CORPUS_NAME")
 if rag_corpus:
     try:
         from google.adk.tools.retrieval.vertex_ai_rag_retrieval import (

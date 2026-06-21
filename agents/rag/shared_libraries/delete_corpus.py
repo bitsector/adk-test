@@ -23,9 +23,11 @@ managed-storage cost. Run this when you are done experimenting:
 import os
 
 import vertexai
-from dotenv import load_dotenv, unset_key
+from dotenv import load_dotenv
 from google.auth import default
 from vertexai.preview import rag
+
+from corpus_store import clear_corpus_name, read_corpus_name
 
 cwd_env = os.path.join(os.getcwd(), ".env")
 if os.path.exists(cwd_env):
@@ -50,12 +52,12 @@ def main():
     credentials, _ = default()
     vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=credentials)
 
-    # Delete the corpus the agent currently points at (the one in CORPUS_NAME).
-    corpus_name = os.getenv("CORPUS_NAME")
+    # Delete the corpus the agent currently points at (recorded in .corpus_data).
+    corpus_name = read_corpus_name()
     if not corpus_name:
         print(
-            "CORPUS_NAME is not set in .env, so there's no active corpus to delete.\n"
-            "List/clean up older corpora via the REST API (see README)."
+            "No corpus recorded in agents/rag/.corpus_data, so there's no active "
+            "corpus to delete. List/clean up older corpora via the REST API (see README)."
         )
         return
 
@@ -70,9 +72,9 @@ def main():
     rag.delete_corpus(name=corpus_name)
     print("Corpus deleted (files + embeddings removed).")
 
-    # Clear the stale id so the agent goes back to plain-chat mode.
-    unset_key(ENV_FILE_PATH, "CORPUS_NAME")
-    print(f"Removed CORPUS_NAME from {ENV_FILE_PATH}")
+    # Clear the stale pointer so the agent goes back to plain-chat mode.
+    clear_corpus_name()
+    print("Cleared agents/rag/.corpus_data")
 
     print("\nRemaining corpora in this project/location:")
     remaining = list(rag.list_corpora())

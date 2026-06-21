@@ -20,8 +20,9 @@ Drop .pdf / .txt / .docx / .md files into agents/rag/rag_materials/ and run:
 
 Each run creates a fresh, timestamped corpus (e.g. 202606141530-corpus) from
 every document in rag_materials/ (their union = the knowledge base), writes its
-resource name to CORPUS_NAME in .env, and the agent reads CORPUS_NAME to point at
-it. Within a run, uploads are retried and de-duplicated on connection resets.
+resource name to agents/rag/.corpus_data, and the agent reads that file to point
+at it. The shared root .env is never modified. Within a run, uploads are retried
+and de-duplicated on connection resets.
 
 Note: each run leaves the previous corpus behind (orphaned). Delete the active
 one with delete_corpus.py, or clean up older ones via the REST list/delete.
@@ -33,10 +34,12 @@ import time
 from datetime import datetime
 
 import vertexai
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv
 from google.api_core.exceptions import ResourceExhausted
 from google.auth import default
 from vertexai.preview import rag
+
+from corpus_store import CORPUS_DATA_FILE, write_corpus_name
 
 cwd_env = os.path.join(os.getcwd(), ".env")
 if os.path.exists(cwd_env):
@@ -145,15 +148,6 @@ def upload_one(corpus_name, path):
     print(f"  - {display_name}: gave up after {UPLOAD_ATTEMPTS} attempts")
 
 
-def update_env_file(corpus_name, env_file_path):
-    """Point CORPUS_NAME in .env at the corpus the agent should use."""
-    try:
-        set_key(env_file_path, "CORPUS_NAME", corpus_name)
-        print(f"Updated CORPUS_NAME in {env_file_path} to {corpus_name}")
-    except Exception as e:
-        print(f"Error updating .env file: {e}")
-
-
 def list_corpus_files(corpus_name):
     """Lists files in the specified corpus."""
     files = list(rag.list_files(corpus_name=corpus_name))
@@ -166,7 +160,8 @@ def main():
     initialize_vertex_ai()
     corpus = create_corpus()
 
-    update_env_file(corpus.name, ENV_FILE_PATH)
+    write_corpus_name(corpus.name)
+    print(f"Wrote corpus name to {CORPUS_DATA_FILE}")
 
     materials = discover_materials()
     if not materials:

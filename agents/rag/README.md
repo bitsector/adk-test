@@ -18,12 +18,24 @@ its sources. By default the corpus is Alphabet's 2025 10-K PDF.
 ## How the RAG works (where the "RAG part" lives)
 
 1. **Ingestion (run once):** `prepare_corpus_and_data.py` creates a corpus, embeds
-   the PDF with `text-embedding-004`, and writes the corpus id to `.env` as `CORPUS_NAME`.
-2. **Retrieval (runtime):** [agent.py](agent.py) builds a `VertexAiRagRetrieval` tool
-   pointed at `CORPUS_NAME`. Gemini calls it, RAG Engine returns the top matching
-   chunks, and Gemini answers from them with citations.
+   the docs with `text-embedding-004`, and writes the corpus resource name to
+   `agents/rag/.corpus_data`.
+2. **Retrieval (runtime):** [agent.py](agent.py) reads `.corpus_data` and builds a
+   `VertexAiRagRetrieval` tool pointed at that corpus. Gemini calls it, RAG Engine
+   returns the top matching chunks, and Gemini answers from them with citations.
 
-If `CORPUS_NAME` is unset, the tool is skipped and this runs as a plain chat agent.
+If `.corpus_data` is missing (and no `CORPUS_NAME` env fallback is set), the tool
+is skipped and this runs as a plain chat agent.
+
+### Why `.corpus_data` and not `.env`
+
+The corpus pointer lives in `agents/rag/.corpus_data` — a file the rag agent owns
+— rather than the repo-root `.env` shared by every agent. This keeps the ingestion
+script from editing config that belongs to the other agents. The three pieces
+agree on the path/format via [shared_libraries/corpus_store.py](shared_libraries/corpus_store.py)
+(`write_corpus_name` / `read_corpus_name` / `clear_corpus_name`). `.corpus_data` is
+gitignored (per-environment runtime state). For containers/prod, where shipping a
+file is awkward, the agent also accepts a `CORPUS_NAME` env var as a fallback.
 
 ## Using it on Vertex — step by step
 
@@ -60,7 +72,7 @@ curl -s -X PATCH \
 # 4. Drop your .pdf / .txt / .docx / .md documents into agents/rag/rag_materials/,
 #    then build the corpus. Each run creates a fresh timestamped corpus from all
 #    those files (their union = the knowledge base) and writes its resource name
-#    to CORPUS_NAME in .env, which the agent reads.
+#    to agents/rag/.corpus_data, which the agent reads.
 python agents/rag/shared_libraries/prepare_corpus_and_data.py
 
 # 5. Run it
@@ -77,7 +89,7 @@ adk web agents            # web UI, pick "rag" from the dropdown
 To add or change documents, just edit the contents of `rag_materials/` and re-run
 the ingestion script — it sweeps every `*.pdf` / `*.txt` / `*.docx` / `*.md` there
 into a **fresh timestamped corpus** (e.g. `202606141530-corpus`) and repoints
-`CORPUS_NAME` at it. The previous corpus is left behind (orphaned) — delete the
+`.corpus_data` at it. The previous corpus is left behind (orphaned) — delete the
 active one with `delete_corpus.py`, or clean up older ones via the REST list/delete.
 (The engine also supports PPTX/HTML if you widen `SUPPORTED_EXTENSIONS`; images are
 not supported.)
@@ -145,14 +157,14 @@ When you're done, delete the corpus so the managed storage stops costing anythin
 python agents/rag/shared_libraries/delete_corpus.py
 ```
 
-This calls `rag.delete_corpus` (removes files + embeddings) and clears `CORPUS_NAME`
-from `.env`, so the agent drops back to plain-chat mode. The default `RagManagedDb`
+This calls `rag.delete_corpus` (removes files + embeddings) and clears
+`agents/rag/.corpus_data`, so the agent drops back to plain-chat mode. The default `RagManagedDb`
 storage lives in a Google-managed tenant project, so deleting the corpus — not any
 action in your own project's console — is what ends the charge.
 
 ### Delete ALL corpora (nuke everything)
 
-`delete_corpus.py` only removes the one corpus in `CORPUS_NAME`. Because each
+`delete_corpus.py` only removes the one corpus recorded in `.corpus_data`. Because each
 ingestion run creates a fresh timestamped corpus, orphans accumulate — this
 gcloud-auth + REST sweep lists every corpus in a region and force-deletes each
 (`force=true` also removes its files). Pure shell, no extra deps:
