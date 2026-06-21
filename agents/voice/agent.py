@@ -29,9 +29,18 @@ def get_time(timezone: str = "local") -> dict:
 #   - Vertex AI (GOOGLE_GENAI_USE_VERTEXAI=True):         gemini-live-2.5-flash-native-audio
 # Note: rag needs Vertex, so running voice on AI Studio means rag won't work in
 # the same `adk web` process, and vice versa. Override with VOICE_MODEL_ID in .env.
+#
+# The default tracks the backend automatically so flipping GOOGLE_GENAI_USE_VERTEXAI
+# doesn't silently leave a wrong-backend model name behind (the 1008 footgun above).
+_USE_VERTEX = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("true", "1")
+_DEFAULT_VOICE_MODEL = (
+    "gemini-live-2.5-flash-native-audio"  # Vertex AI
+    if _USE_VERTEX
+    else "gemini-2.5-flash-native-audio-latest"  # AI Studio
+)
 root_agent = Agent(
     name="root_agent",
-    model=os.getenv("VOICE_MODEL_ID", "gemini-2.5-flash-native-audio-latest"),
+    model=os.getenv("VOICE_MODEL_ID", _DEFAULT_VOICE_MODEL),
     instruction=(
         "You are a friendly voice assistant. Keep replies short and natural, "
         "the way a person speaks out loud. If asked the time, call get_time."
