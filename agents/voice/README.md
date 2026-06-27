@@ -62,3 +62,45 @@ The Live model ID is backend-specific. On Vertex it is
 ```bash
 adk web        # from the repo root, then open the voice agent in the UI
 ```
+
+## Run in Docker
+
+The image runs `adk web` on the Vertex backend. Mic capture/playback happen in
+the **browser**, not the container — it's just the web server relaying audio over
+a WebSocket to the Gemini Live API, so no sound devices are needed. The SA key is
+**not** baked into the image (`.dockerignore` excludes `secrets/`); bind-mount it
+read-only at run time.
+
+Build from the **repo root** (the context must be the root so `requirements.txt`
+is reachable):
+
+```bash
+docker build -f agents/voice/Dockerfile -t voice-agent .
+```
+
+Run (override `GOOGLE_APPLICATION_CREDENTIALS` to the in-container path — do *not*
+use `--env-file .env`, whose value is a host path that won't exist in the container):
+
+```bash
+docker run --rm -p 8000:8000 \
+  -e GOOGLE_GENAI_USE_VERTEXAI=True \
+  -e GOOGLE_CLOUD_PROJECT=gcp-cloud-run-tests \
+  -e GOOGLE_CLOUD_LOCATION=us-central1 \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/secrets/sa.json \
+  -v "$PWD/secrets/voice-agent-sa-key.json:/secrets/sa.json:ro" \
+  voice-agent
+```
+
+### ⚠️ Open `http://localhost:8000`, NOT `http://0.0.0.0:8000`
+
+The container binds `0.0.0.0` (correct — that's the bind address so the port is
+reachable), and ADK's startup banner prints `http://0.0.0.0:8000`. **Do not type
+that into the browser.** The microphone (`getUserMedia`) only works in a *secure
+context*: browsers trust `localhost` / `127.0.0.1` but **not** `0.0.0.0`. On
+`0.0.0.0` the page can't access the mic (`navigator.mediaDevices` is `undefined`),
+so the call connects but no audio is ever recorded or sent, and the session drops.
+
+Use **`http://localhost:8000`** (or `http://127.0.0.1:8000`).
+
+> If the browser can't reach the port at all (rather than just no audio), check
+> the NordVPN kill switch: `nordvpn set lan-discovery enable`.
