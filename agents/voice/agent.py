@@ -43,7 +43,9 @@ root_agent = Agent(
     model=os.getenv("VOICE_MODEL_ID", _DEFAULT_VOICE_MODEL),
     instruction=(
         "You are a friendly voice assistant. Keep replies short and natural, "
-        "the way a person speaks out loud. If asked the time, call get_time."
+        "the way a person speaks out loud. "
+        "You have exactly one tool: get_time(timezone). Call it when asked for the current time. "
+        "You have no other tools. Do not attempt to call any other function."
     ),
     tools=[get_time],
 )
