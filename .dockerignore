@@ -1,0 +1,29 @@
+# Build context = repo root. This single file is honored for every agent build
+# (docker reads .dockerignore from the context root, not next to the Dockerfile).
+
+# Secrets / local config — never bake into any image
+.env
+.env.*
+!.env.example
+secrets/
+
+# Python caches
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# ADK runtime state (session DBs + uploaded files; may contain PII)
+**/.adk/
+
+# Local RAG state / corpus materials (not needed at build time)
+agents/rag/.corpus_data
+agents/rag/rag_materials/
+
+# VCS / CI / editor
+.git/
+.github/
+.venv/
+.claude/
+
+# Misc not needed in images
+samples/
