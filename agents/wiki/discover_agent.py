@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from google.adk.agents import Agent
 
-from shared.discover_wikipedia_candidates import discover_wikipedia_candidates
+from .shared.discover_wikipedia_candidates import discover_wikipedia_candidates
 
 load_dotenv()
 

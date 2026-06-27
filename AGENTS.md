@@ -27,8 +27,8 @@ agents and is not itself an app.
 
 ```
 agents/
-├── shared/      # shared tool functions (importable as `shared`), not an app
 ├── wiki/        # app: Wikipedia research orchestrator + discover sub-agent
+│   └── shared/  # Wikipedia tool functions, private to wiki
 ├── weather/     # app: minimal template agent to copy for new experiments
 └── rag/         # app: Vertex AI RAG Engine agent (needs Vertex, see rag/README.md)
 ```
@@ -52,7 +52,7 @@ adk run agents/wiki # CLI, single app
 ## Conventions
 
 - Tool functions return a dict and never raise; on failure return `{"error": "<reason>", ...}`.
-- Shared tools live in `agents/shared/` and are imported as `from shared.x import y`.
+- Tools private to one agent live in a `shared/` subfolder inside that agent's directory and are imported with relative imports (`from .shared.x import y`).
 - Sub-agents (e.g. wiki's discover_agent) are plain modules inside an app folder, not
   separate app folders, so they don't show up in the picker.
 - Config is read from `.env` via `python-dotenv` (`GOOGLE_API_KEY`, `MODEL_ID`).

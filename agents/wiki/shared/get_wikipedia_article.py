@@ -35,3 +35,5 @@ def get_wikipedia_article(title: str) -> dict:
         return {"error": "disambiguation", "options": e.options[:10]}
     except wikipedia.PageError:
         return {"error": "page_not_found", "query": title}
+    except Exception as e:
+        return {"error": "fetch_failed", "reason": str(e), "query": title}

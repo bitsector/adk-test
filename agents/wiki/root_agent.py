@@ -5,7 +5,7 @@ from google.adk.agents import Agent
 from google.adk.tools import AgentTool
 
 from .discover_agent import discover_agent
-from shared.get_wikipedia_article import get_wikipedia_article
+from .shared.get_wikipedia_article import get_wikipedia_article
 
 load_dotenv()
 
