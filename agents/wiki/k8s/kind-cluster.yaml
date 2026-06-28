@@ -1,0 +1,28 @@
+# kind cluster for the wiki agent (single node — enough for the Phase 0 smoke test).
+#
+#   kind create cluster --config agents/wiki/k8s/kind-cluster.yaml
+#
+# Node image pinned to the latest published kindest/node (v1.36.1 at time of
+# writing). If this kind build rejects it, drop to v1.35.5 or v1.34.8.
+#
+# Exposure: NodePort + extraPortMappings is the simplest way out of kind — no
+# LoadBalancer (kind has no cloud provider) and no Ingress controller needed.
+# host:8000 -> node:30080 (the Service's nodePort) -> pod:8000.
+#
+# NOTE: the voice agent's kind cluster also maps host :8000, so only one of the
+# two clusters can run at a time — delete the other first (`kind delete cluster
+# --name voice`). A local `docker run -p 8000:8000` also conflicts; stop it
+# before creating this cluster. Unlike voice, wiki is text-only — no mic /
+# getUserMedia, so no secure-context constraint: http://<lan-ip>:8000 works for
+# remote browsers too.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: wiki
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.36.1
+    extraPortMappings:
+      - containerPort: 30080        # must equal the Service nodePort below
+        hostPort: 8000              # what you open in the browser
+        listenAddress: "0.0.0.0"    # reachable from the LAN; use 127.0.0.1 for host-only
+        protocol: TCP

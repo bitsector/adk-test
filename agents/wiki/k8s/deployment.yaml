@@ -1,0 +1,85 @@
+# Wiki agent: 1 pod (for now) + a NodePort Service to expose it.
+#
+# Prereqs (see README.md): the image must be loaded into kind, and the API key
+# must exist as a Secret (wiki uses the AI Studio / API-key backend — NO Vertex,
+# NO service account, unlike the voice agent):
+#   kind load docker-image wiki-agent:latest --name wiki
+#   kubectl create secret generic wiki-agent-secrets \
+#       --from-literal=GOOGLE_API_KEY="$GOOGLE_API_KEY"
+#
+# No shared DB yet — this runs ADK's default local SQLite, so a refresh keeps
+# history only because there's a single pod. The multi-pod/DB step comes later.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wiki-agent
+  labels:
+    app: wiki-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wiki-agent
+  template:
+    metadata:
+      labels:
+        app: wiki-agent
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999          # appuser in the image
+        runAsGroup: 999
+        # No fsGroup needed: unlike voice, wiki mounts no Secret file — the API
+        # key arrives as an env var (secretKeyRef below), not a file to chown.
+      containers:
+        - name: wiki-agent
+          image: wiki-agent:latest
+          imagePullPolicy: IfNotPresent   # use the kind-loaded image; do not pull
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            # AI Studio backend. We deliberately DO NOT set
+            # GOOGLE_GENAI_USE_VERTEXAI — leaving it unset keeps wiki on the
+            # plain API-key path. Setting it True would demand a Vertex SA.
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wiki-agent-secrets
+                  key: GOOGLE_API_KEY
+            - name: MODEL_ID
+              value: "gemini-2.5-flash-lite"
+          readinessProbe:
+            httpGet:
+              path: /version
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /version
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wiki-agent
+  labels:
+    app: wiki-agent
+spec:
+  type: NodePort
+  selector:
+    app: wiki-agent
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      nodePort: 30080        # must match extraPortMappings.containerPort in kind-cluster.yaml
