@@ -3,6 +3,32 @@
 A bidirectional (audio in / audio out) voice assistant built on the Gemini
 **Live API**. Run it through `adk web` and use the microphone in the dev UI.
 
+## Status
+
+Done:
+
+- ✅ **Containerized** the agent (see [Dockerfile](Dockerfile)).
+- ✅ **Ran in Docker** successfully and exposed the `adk web` interface.
+
+TODO:
+
+- [ ] **Session DB** — replace ADK's per-pod local SQLite with a shared, persistent
+  session store (planned: CloudNativePG / Postgres via `--session_service_uri`) so
+  conversation history survives restarts and isn't tied to one pod.
+- [ ] **Run with the session DB in Kubernetes** — first local (kind), then GKE.
+- [ ] **WebSocket traversal across the web ↔ GKE cluster boundary** — confirm the
+  `/run_live` WebSocket survives the ingress/LB hop into the cluster (long idle
+  timeouts, upgrade headers). May turn out to be a non-issue.
+- [ ] **The voice-vs-text 400** — typing text in the dev UI hits the unary
+  `generateContent` API, which the Live-only model rejects:
+  ```
+  POST .../models/gemini-live-2.5-flash-native-audio:generateContent → 400
+  "gemini-live-2.5-flash-native-audio is not supported in the generateContent API."
+  ```
+  Voice (`/run_live`, the Live/bidi API) works; the dev UI's text box (`/run_sse`,
+  the unary API) does not. Fix is a custom front-end that sends both text and audio
+  over one `/run_live` session — deferred to a UX phase (backend stays unchanged).
+
 ## Why this needs Vertex AI
 
 `adk web` only offers **transparent** session resumption (it hard-wires

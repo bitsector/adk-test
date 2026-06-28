@@ -1,0 +1,25 @@
+# kind cluster for the voice agent (single node — enough for the Phase 0 smoke test).
+#
+#   kind create cluster --config agents/voice/k8s/kind-cluster.yaml
+#
+# Node image pinned to the latest published kindest/node (v1.36.1 at time of
+# writing). If this kind build rejects it, drop to v1.35.5 or v1.34.8.
+#
+# Exposure: NodePort + extraPortMappings is the simplest way out of kind — no
+# LoadBalancer (kind has no cloud provider) and no Ingress controller needed.
+# host:8000 -> node:30080 (the Service's nodePort) -> pod:8000.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: voice
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.36.1
+    extraPortMappings:
+      - containerPort: 30080        # must equal the Service nodePort below
+        hostPort: 8000              # what you open in the browser
+        # 0.0.0.0 = reachable from the LAN, not just this host. Use 127.0.0.1 to
+        # keep it host-only. NOTE: a remote browser over plain http:// can't use
+        # the mic — getUserMedia needs a secure context (localhost or HTTPS). So
+        # for actual voice testing, use http://localhost:8000 ON THIS HOST.
+        listenAddress: "0.0.0.0"
+        protocol: TCP

@@ -1,0 +1,89 @@
+# Voice agent: 1 pod (for now) + a NodePort Service to expose it.
+#
+# Prereqs (see README.md): the image must be loaded into kind, and the SA key
+# must exist as a Secret:
+#   kind load docker-image voice-agent:latest --name voice
+#   kubectl create secret generic voice-agent-sa \
+#       --from-file=sa.json=secrets/voice-agent-sa-key.json
+#
+# No shared DB yet — this runs ADK's default local SQLite, so a refresh keeps
+# history only because there's a single pod. The multi-pod/DB step comes later.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voice-agent
+  labels:
+    app: voice-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: voice-agent
+  template:
+    metadata:
+      labels:
+        app: voice-agent
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999          # appuser in the image
+        runAsGroup: 999
+        fsGroup: 999            # so the mounted SA Secret is group-readable by appuser
+      containers:
+        - name: voice-agent
+          image: voice-agent:latest
+          imagePullPolicy: IfNotPresent   # use the kind-loaded image; do not pull
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: GOOGLE_GENAI_USE_VERTEXAI
+              value: "True"
+            - name: GOOGLE_CLOUD_PROJECT
+              value: "gcp-cloud-run-tests"
+            - name: GOOGLE_CLOUD_LOCATION
+              value: "us-central1"
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/secrets/sa.json"
+          volumeMounts:
+            - name: sa
+              mountPath: /secrets
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /version
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /version
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+      volumes:
+        - name: sa
+          secret:
+            secretName: voice-agent-sa
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: voice-agent
+  labels:
+    app: voice-agent
+spec:
+  type: NodePort
+  selector:
+    app: voice-agent
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      nodePort: 30080        # must match extraPortMappings.containerPort in kind-cluster.yaml
