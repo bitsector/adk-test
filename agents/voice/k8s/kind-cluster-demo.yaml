@@ -1,0 +1,21 @@
+# Separate kind cluster for a one-off voice DEMO.
+#
+#   kind create cluster --config agents/voice/k8s/kind-cluster-demo.yaml
+#
+# Why a second config: the `wiki` cluster already maps host :8000, so this one
+# stays off 8000 to avoid the conflict. host:8080 -> node:30080 -> pod:8000.
+# Cluster is named `voice-demo` (kubectl context becomes `kind-voice-demo`).
+#
+# NOTE: for actual mic testing open http://localhost:8080 ON THIS HOST —
+# getUserMedia needs a secure context (localhost or HTTPS), not a LAN IP.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: voice-demo
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.36.1
+    extraPortMappings:
+      - containerPort: 30080        # must equal the Service nodePort in deployment.yaml
+        hostPort: 8080              # what you open in the browser (NOT 8000 — wiki uses that)
+        listenAddress: "0.0.0.0"
+        protocol: TCP

@@ -27,15 +27,20 @@
 # grants mic access; a remote host would need HTTPS).
 
 # ---- builder: install deps into an isolated prefix ----
-FROM python:3.14-slim AS builder
+# Alpine (musl) base: it ships no perl-base/glibc, so it avoids the Debian-slim
+# OS-package CVEs (perl-base, libc6, libsqlite3). All our deps resolve to
+# musllinux wheels, so no compiler/build deps are needed here.
+FROM python:3.14-alpine AS builder
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ---- runtime: slim image with only the installed packages + agent code ----
-FROM python:3.14-slim
-# Non-root user for the running process
-RUN useradd --system --create-home --home-dir /home/appuser appuser
+FROM python:3.14-alpine
+# Non-root user for the running process. Alpine's busybox `adduser` has no
+# useradd; -S makes a system user, and we create a matching group first so the
+# `appuser:appuser` chowns below resolve (a bare `adduser -S` lands in nogroup).
+RUN addgroup -S appuser && adduser -S -G appuser -h /home/appuser appuser
 WORKDIR /app
 
 # Bring in installed packages and console scripts (the `adk` CLI) from builder.
@@ -43,7 +48,8 @@ WORKDIR /app
 # into its own package dir at startup, which fails if the packages are root-owned.
 COPY --chown=appuser:appuser --from=builder /install /usr/local
 
-# Voice app only (a single agent.py — no shared/ subpackage, unlike wiki).
+# Voice app only. It ships its own `shared/` subpackage (its copy of the
+# Wikipedia tool), so nothing outside agents/voice/ is needed.
 COPY agents/voice/ agents/voice/
 
 # Let the non-root user write the ADK session DB it creates under the app dir.

@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 from google.adk.agents import Agent
 
+from .shared.get_wikipedia_article import get_wikipedia_article
+
 load_dotenv()
 
 
@@ -44,8 +46,14 @@ root_agent = Agent(
     instruction=(
         "You are a friendly voice assistant. Keep replies short and natural, "
         "the way a person speaks out loud. "
-        "You have exactly one tool: get_time(timezone). Call it when asked for the current time. "
-        "You have no other tools. Do not attempt to call any other function."
+        "You have two tools:\n"
+        "- get_time(timezone): call it when asked for the current time.\n"
+        "- get_wikipedia_article(title): your Wikipedia tool. ALWAYS use it whenever "
+        "the user asks you to look up, fetch, or tell them about a topic, person, "
+        "place, or thing. Do not answer factual lookups from memory — call the "
+        "Wikipedia tool and answer only from what it returns. When the article comes "
+        "back, summarize the key points in a few short sentences rather than reading "
+        "it out verbatim."
     ),
-    tools=[get_time],
+    tools=[get_time, get_wikipedia_article],
 )
